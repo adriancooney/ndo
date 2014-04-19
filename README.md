@@ -1,6 +1,6 @@
 # ndo
 ### Generator based CSS animation library
-ndo is a CSS animation library that uses the latest ES6 features such as Promises and Generators for quickly prototyping animations. This unforuntately comes at a cost, it currently only works in the latest stable version of Chrome. ndo is a more of an experiment and shouldn't be used in production if your target market is anything besides Chrome.
+ndo is a CSS animation library that uses the latest ES6 features such as Promises and Generators for quickly prototyping animations. This unforuntately comes at a cost, it currently only works in the latest stable version of Chrome. ndo is a more of an experiment and shouldn't be used in production if your target market is anything besides Chrome. See `examples/` for some example demos.
 
 ### Design choices
 * Exposes 17 globals, all prefixed with "n", each of which can be accessed on the `ndo` object.
@@ -10,9 +10,9 @@ ndo is a CSS animation library that uses the latest ES6 features such as Promise
 * Only works in Chrome (for now, waiting for other browsers to catch up).
 
 ## API
-ndo strives for a simple API to make greating animations as simple as possible. 
+ndo strives for a simple API to make creating awesome animations as simple, fun and time efficient as possible.
 
-## `ndo( <generator>, <...*> )`
+#### `ndo( <generator>, <...*> )`
 Execute a generator yielding promises or arrays of promises. First argument will always be a generator, any argument thereafter will be applied to the generator.
 
 ```js
