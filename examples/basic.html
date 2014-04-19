@@ -15,29 +15,26 @@
 </body>
 <script src="../ndo.js" type="text/javascript"></script>
 <script type"text/javascript">
-
-	ndo.procedure("wiggle", function*(box, wiggle) {
-		for(var i = 0; i < 3; i++) {
-			yield ntranslateX(box, -wiggle, 100);
-			yield ntranslateX(box, wiggle, 100);
-		}
-	});
-	
 	ndo(function*() {
 		var box = nget("#box");
+
+		// DO ALL THE TRANSFORMS
 		yield ntranslate(box, 400, 400, 1000);
+
 		yield nrotate(box, 30, 3000);
 		yield nrotate(box, -30, 500);
 		yield [ nrotate(box, 80, 500), ntranslate(box, 50, 50, 1000) ]; // Concurrent transforms
+
 		yield nwait(2000);
-		yield nscale(box, 2, 1000);
+		yield nscale(box, 2, 2, 1000);
 		yield ntranslate(box, 500, 500, 1000);
 
 		yield nfade(box, 0, 1000);
 		yield nfadeIn(box, 1000);
 		yield nfadeOut(box, 1000);
+		yield nfadeIn(box, 300);
 
-		// yield nskew(box, 50, 50, 1000);
-	}).catch(function(err) { console.log(err); });
+		yield nskew(box, 50, 50, 1000);
+	});
 </script>
 </html>

@@ -245,7 +245,7 @@ ndo.transform = function(elem, transformation, value, duration, easing) {
 	duration = ndo.duration(duration);
 
 	return ndo(function*() {
-		elem.style.transitionProperty = "transform";
+		elem.style.transitionProperty = "-webkit-transform";
 		elem.style.transitionDuration = duration.text;
 		if(easing) elem.style.transitionTimingFunction = easing;
 

@@ -21,6 +21,8 @@
 			yield ntranslate(box, -wiggle, 0, 100);
 			yield ntranslate(box, wiggle, 0, 100);
 		}
+
+		yield ntranslate(box, 0, 0, 50);
 	});
 	
 	ndo(function*() {
@@ -28,6 +30,6 @@
 		
 		yield ndo.run("wiggle", box, 10);
 		yield ndo.run("wiggle", box, 30);
-	}).catch(function(err) { console.log(err); });
+	});
 </script>
 </html>
