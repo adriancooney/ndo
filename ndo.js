@@ -5,11 +5,13 @@
  * @return {Promise}  
  */
 var ndo = function(gen) {
+	if(typeof gen !== "function") throw new Error("Please supply a generator function to ndo.");
+	
 	// Create the generator
 	var schedule = gen.apply(ndo, Array.prototype.slice.call(arguments, 1));
 
 	// Create the return promise
-	return new Promise(function(resolve, reject) {
+	return new ndo.Promise(function(resolve, reject) {
 		// Iterate over each value yielded
 		(function iterate() {
 			// Get the next yielded value
@@ -61,6 +63,7 @@ var ndo = function(gen) {
  */
 ndo.procedure = function(name, gen) {
 	ndo.procedures[name] = gen;
+	window["n" + name] = ndo.run.bind(ndo, name);
 };
 
 /**
@@ -93,7 +96,7 @@ ndo.procedures = {};
  * Allow for flexible promise implementation as long as they conform to the ES6 spec.
  * @type {Promise}
  */
-ndo.Promise = Promise;
+ndo.Promise = window.Future || window.Promise;
 
 /*
  * ndo Helper functions.
@@ -169,6 +172,51 @@ ndo.parseState = function(elem) {
 	return state;
 };
 
+/**
+ * Add getters and setters to elemen for the translations, rotation etc.
+ * Takes in the state object and effectively mirrors it on the element
+ * with the "n" prefix. When one of these properties is requested, the
+ * elements state is parsed again and returns the value with the getter, 
+ * dynamically.
+ * 
+ * @param {HTMLElement} elem 
+ */
+ndo.addProperties = function(elem) {
+	// Get the initial state object to mirror
+	var state = ndo.parseState(elem);
+
+	// Recursively iterate over the state object's levels
+	(function defineProp(obj, host, path) {
+		// Loop over each key with Object.keys for closure
+		Object.keys(obj).forEach(function(key) {
+			var value = obj[key],
+				name = (path === "" ? "n" + key : key); // If this is the topmost level, prefix the property
+
+			// If it's an object, go deeper (recur) with new path and host object
+			if(typeof value === "object" && !Array.isArray(value)) defineProp(value, host[name] = {}, path + "." + key);
+			else Object.defineProperty(host, name, { // Otherwise define the getter
+				configurable: true,
+				get: function() {
+					// Split the path up by dot
+					var tree = path.split(".").slice(1),
+						// Get the state we need to apply the tree path to
+						master = ndo.parseState(elem);
+
+					// Push in the final property to access
+					tree.push(path === "" ? name.substr(1) : name);
+
+					// Recursively iterate down through the path on the master object
+					// if we reach the end, return that value.
+					return (function recur(obj, path) {
+						if(path.length) return recur(obj[path[0]], path.slice(1))
+						else return obj;
+					})(master, tree);
+				}
+			});
+		});
+	})(state, elem, "");
+};
+
 /*
  * ndo animation functions. 
  */
@@ -199,7 +247,7 @@ ndo.transform = function(elem, transformation, value, duration, easing) {
 	return ndo(function*() {
 		elem.style.transitionProperty = "transform";
 		elem.style.transitionDuration = duration.text;
-		if(easing) elem.style.tranitionTimingFunction = easing;
+		if(easing) elem.style.transitionTimingFunction = easing;
 
 		var prefix = "webkit", //TODO: moz.
 			transform = elem.style[prefix + "Transform"], // Get the current transform
@@ -231,18 +279,6 @@ ndo.rotate = function(elem, degrees, duration, easing) {
 };
 
 /**
- * Scale an element.
- * @param  {HTMLElement} elem     
- * @param  {number} factor
- * @param  {number} duration 
- * @param  {string} easing   See .transform (optional)
- * @return {Promise}          
- */
-ndo.scale = function(elem, factor, duration, easing) {
-	return ndo.transform(elem, "scale", factor, duration, easing);
-};
-
-/**
  * Scale an element in two dimensions.
  * @param  {HTMLElement} elem     
  * @param  {number} x
@@ -251,7 +287,7 @@ ndo.scale = function(elem, factor, duration, easing) {
  * @param  {string} easing   See .transform (optional)
  * @return {Promise}          
  */
-ndo.scaleXY = function(elem, x, y, duration, easing) {
+ndo.scale = function(elem, x, y, duration, easing) {
 	return ndo.transform(elem, "scale", x + ", " + y, duration, easing);
 };
 
@@ -282,6 +318,48 @@ ndo.skew = function(elem, x, y, duration, easing) {
 };
 
 /**
+ * Transition the opacity of an element.
+ * @param  {HTMLElement} elem     
+ * @param  {number} opacity  Value for css property opacity
+ * @param  {number} duration 
+ * @param  {string} easing   See .transform.
+ * @return {Promise}         
+ */
+ndo.fade = function(elem, opacity, duration, easing) {
+	duration = ndo.duration(duration);
+
+	return ndo(function*() {
+		elem.style.transitionProperty = "opacity";
+		elem.style.transitionDuration = duration.text;
+		elem.style.transitionTimingFunction = easing;
+		elem.style.opacity = opacity;
+		yield ndo.wait(duration.length);
+	});
+};
+
+/**
+ * Fade in an element.
+ * @param  {HTMLElement} elem     
+ * @param  {number} duration 
+ * @param  {string} easing   See .transform
+ * @return {Promise}          
+ */
+ndo.fadeIn = function(elem, duration, easing) {
+	return ndo.fade(elem, 1, duration, easing);
+};
+
+/**
+ * Fade out an element.
+ * @param  {HTMLElement} elem     
+ * @param  {number} duration 
+ * @param  {string} easing   See .transform
+ * @return {Promise}          
+ */
+ndo.fadeOut = function(elem, duration, easing) {
+	return ndo.fade(elem, 0, duration, easing);
+};
+
+/**
  * Set a css property on a value.
  * @param  {HTMLElement} elem  
  * @param  {string|object} prop  String or object of prop:value
@@ -290,7 +368,7 @@ ndo.skew = function(elem, x, y, duration, easing) {
 ndo.css = function(elem, prop, value) {
 	if(typeof prop === "object") {
 		for(var key in prop) 
-			ndo["set"](elem, key, prop[key])
+			ndo.css(elem, key, prop[key])
 	} else elem.style.setProperty(prop, value);
 };
 
@@ -302,24 +380,21 @@ ndo.css = function(elem, prop, value) {
 ndo["get"] = function() {
 	var elem = document.querySelector.apply(document, arguments);
 
-	if(elem) {
-		var state = ndo.parseState(elem);
-		for(var key in state) elem["n" + key] = state[key];
-	}
+	if(elem) ndo.addProperties(elem);
 
 	return elem;
 };
-ndo.getAll = document.querySelectorAll.bind(document);
 
 /*
  * Syntax sugar for the API.
  */
 ndo.move = ndo.translate;
-ndo.moveX = ndo.translateX;
-ndo.moveY = ndo.translateY;
+ndo.delay = ndo.wait;
 
 /*
  * All the expose n<fn> API globally.
  */
-ndo.api = ["wait", "rotate", "translate", "scale", "scaleXY", "skew", "get", "getAll", "move", "moveX", "set"]
+ndo.api = ["wait", "delay", "run", "procedure",
+	"rotate", "translate", "scale", "skew", "move", "fade", "fadeIn", "fadeOut",
+	"get", "css"]
 	.forEach(function(v) { window["n" + v] = ndo[v]; });

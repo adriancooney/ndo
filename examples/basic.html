@@ -32,7 +32,12 @@
 		yield nwait(2000);
 		yield nscale(box, 2, 1000);
 		yield ntranslate(box, 500, 500, 1000);
-		yield nskew(box, 50, 50, 1000);
-	});
+
+		yield nfade(box, 0, 1000);
+		yield nfadeIn(box, 1000);
+		yield nfadeOut(box, 1000);
+
+		// yield nskew(box, 50, 50, 1000);
+	}).catch(function(err) { console.log(err); });
 </script>
 </html>
